@@ -13,7 +13,7 @@ try {
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 const OLLAMA_MODEL = "qwen2.5:7b";
-const AI_MODE = (process.env.AI_MODE || "offline").toLowerCase();
+const AI_MODE = (process.env.AI_MODE || "cloud-first").toLowerCase();
 const VALID_PROVIDERS = new Set(["ollama", "gemini", "plantilla-local"]);
 
 const ai = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
@@ -133,11 +133,11 @@ async function callOllama(payload) {
   return parseJsonRespuesta(response.message.content);
 }
 
-// Estrategia configurable con sesgo offline:
-// - offline (por defecto): Ollama -> plantilla local
+// Estrategia configurable:
+// - cloud-first (por defecto): Gemini -> Ollama -> plantilla local
 // - hybrid: Ollama -> Gemini -> plantilla local
-// - cloud-first: Gemini -> Ollama -> plantilla local
-// También se puede personalizar con AI_PROVIDER_ORDER=ollama,gemini,plantilla-local
+// - offline: Ollama -> plantilla local
+// También se puede personalizar con AI_PROVIDER_ORDER=gemini,ollama,plantilla-local
 // para definir el orden exacto.
 async function generarRecomendacion(payload) {
   const providerOrder = getProviderOrder();

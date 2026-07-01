@@ -4,7 +4,7 @@ Dashboard para docentes que detecta estudiantes en riesgo de bajo rendimiento o 
 
 La demo usa nombres ficticios y contexto socioeducativo simulado. El riesgo se calcula solo con senales academicas y de asistencia; el contexto se usa unicamente para adaptar el apoyo recomendado.
 
-Ver tambien [PLAN.md](/Users/macbook/Documents/Personal/hackaton2026/PLAN.md).
+Ver tambien [PLAN.md](PLAN.md).
 
 ## Propuesta
 
@@ -16,10 +16,10 @@ Radar Escolar ayuda al docente a responder tres preguntas:
 
 ## Stack
 
-- Frontend: Next.js 14 (App Router) + React 18 + Tailwind CSS, en `/Users/macbook/Documents/Personal/hackaton2026/frontend`.
-- Backend: Express + Node.js, en `/Users/macbook/Documents/Personal/hackaton2026/backend`.
+- Frontend: Next.js 15.5.18 (App Router) + React 18 + Tailwind CSS, en `frontend/`.
+- Backend: Express + Node.js, en `backend/`.
 - Base de datos: PostgreSQL, con cliente `pg` directo.
-- IA: `Ollama` local con `qwen2.5:7b` como camino principal offline, y plantilla local como fallback final. `Gemini` queda como opción secundaria solo si se habilita explícitamente.
+- IA: estrategia configurable por `AI_MODE`. Por defecto es `cloud-first`: intenta `Gemini` si hay API key, luego `Ollama` local con `qwen2.5:7b`, y finalmente plantilla local.
 
 ## Arquitectura
 
@@ -32,9 +32,9 @@ flowchart LR
     C --> D["Motor de riesgo deterministico"]
     C --> E["Cliente IA con fallback"]
     C --> F["PostgreSQL"]
+    E --> G["Gemini"]
     E --> H["Ollama local (qwen2.5:7b)"]
     E --> I["Plantilla local"]
-    E --> G["Gemini (opcional)"]
 ```
 
 ### Arquitectura frontend
@@ -42,17 +42,19 @@ flowchart LR
 - Usa App Router de Next.js con renderizado del lado del servidor para las vistas principales.
 - `/` muestra el tablero resumen con conteos de riesgo y tarjetas de estudiantes.
 - `/estudiantes/[id]` muestra el detalle: perfil, evolucion semanal, senales detectadas, contexto de apoyo y recomendacion.
-- El acceso al backend esta centralizado en [`frontend/lib/api.ts`](/Users/macbook/Documents/Personal/hackaton2026/frontend/lib/api.ts), que define los tipos de datos usados por la UI.
+- `/configuracion` muestra el modo activo de IA, orden de proveedores, umbrales de riesgo y limites de uso.
+- El acceso al backend esta centralizado en [`frontend/lib/api.ts`](frontend/lib/api.ts), que define los tipos de datos usados por la UI.
 - El frontend no calcula el riesgo principal; consume el riesgo ya resuelto por el backend para mantener una sola fuente de verdad.
 
 ### Arquitectura backend
 
-- [`backend/server.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/server.js) expone la API REST y el `healthcheck`.
-- [`backend/routes/estudiantes.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/routes/estudiantes.js) concentra los endpoints de consulta y recomendacion.
-- [`backend/lib/riskEngine.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/lib/riskEngine.js) implementa la regla de riesgo deterministica.
-- [`backend/lib/aiClient.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/lib/aiClient.js) encapsula la generacion de recomendaciones con estrategia offline-first configurable.
-- [`backend/prompts/radarSystemPrompt.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/prompts/radarSystemPrompt.js) define las restricciones eticas y de seguridad de uso para la IA.
-- [`backend/db/seed.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/db/seed.js) genera un dataset reproducible para la demo.
+- [`backend/server.js`](backend/server.js) expone la API REST y el `healthcheck`.
+- [`backend/routes/estudiantes.js`](backend/routes/estudiantes.js) concentra los endpoints de consulta y recomendacion.
+- [`backend/routes/config.js`](backend/routes/config.js) expone configuracion de solo lectura para la pantalla `/configuracion`.
+- [`backend/lib/riskEngine.js`](backend/lib/riskEngine.js) implementa la regla de riesgo deterministica.
+- [`backend/lib/aiClient.js`](backend/lib/aiClient.js) encapsula la generacion de recomendaciones con fallback configurable.
+- [`backend/prompts/radarSystemPrompt.js`](backend/prompts/radarSystemPrompt.js) define las restricciones eticas y de seguridad de uso para la IA.
+- [`backend/db/seed.js`](backend/db/seed.js) genera un dataset reproducible para la demo.
 
 ### Flujo de datos
 
@@ -60,7 +62,7 @@ flowchart LR
 2. El backend consulta PostgreSQL y agrupa historial por estudiante.
 3. El motor de riesgo compara primeras 2 semanas vs ultimas 2 semanas.
 4. Si el usuario solicita recomendacion, el backend arma un prompt estructurado.
-5. La recomendacion se intenta primero con `Ollama qwen2.5:7b`, y si no está disponible cae a una plantilla local sin depender de internet.
+5. La recomendacion sigue el orden configurado por `AI_MODE` o `AI_PROVIDER_ORDER`. En `cloud-first`, intenta `Gemini`; si no hay API key o falla, intenta `Ollama qwen2.5:7b`; si tampoco está disponible, cae a una plantilla local.
 6. La UI muestra la recomendacion junto con la fuente que respondio: `gemini`, `ollama` o `plantilla-local`.
 
 ## Base de datos
@@ -80,7 +82,7 @@ flowchart LR
 
 ### Esquema
 
-El esquema operativo esta en [`backend/db/schema.sql`](/Users/macbook/Documents/Personal/hackaton2026/backend/db/schema.sql) y se deja un espejo de lectura rapida en [`db/schema.sql`](/Users/macbook/Documents/Personal/hackaton2026/db/schema.sql).
+El esquema operativo esta en [`backend/db/schema.sql`](backend/db/schema.sql) y se deja un espejo de lectura rapida en [`db/schema.sql`](db/schema.sql).
 
 ## Diccionario de datos
 
@@ -145,6 +147,7 @@ El backend tambien identifica la semana de mayor caida para citar el dato que ju
 | Metodo | Ruta | Descripcion |
 |---|---|---|
 | `GET` | `/api/health` | Verifica que el backend este operativo |
+| `GET` | `/api/config` | Devuelve modo de IA, umbrales de riesgo y limites de uso |
 | `GET` | `/api/estudiantes` | Devuelve tablero resumen por estudiante |
 | `GET` | `/api/estudiantes/:id` | Devuelve perfil, historial y riesgo |
 | `POST` | `/api/estudiantes/:id/recomendacion` | Genera recomendacion con fallback |
@@ -153,10 +156,11 @@ El backend tambien identifica la semana de mayor caida para citar el dato que ju
 
 ### Estrategia recomendada para la demo
 
-Modo por defecto: `offline`
+Modo por defecto: `cloud-first`
 
-1. Ollama local (`qwen2.5:7b`)
-2. Plantilla local deterministica
+1. Gemini (`gemini-2.5-flash`)
+2. Ollama local (`qwen2.5:7b`)
+3. Plantilla local deterministica
 
 Modo opcional: `hybrid`
 
@@ -164,13 +168,12 @@ Modo opcional: `hybrid`
 2. Gemini (`gemini-2.5-flash`)
 3. Plantilla local deterministica
 
-Modo opcional: `cloud-first`
+Modo opcional: `offline`
 
-1. Gemini (`gemini-2.5-flash`)
-2. Ollama local (`qwen2.5:7b`)
-3. Plantilla local deterministica
+1. Ollama local (`qwen2.5:7b`)
+2. Plantilla local deterministica
 
-Esto evita que la demo se rompa por falta de conectividad, caida del modelo o respuesta invalida. En la configuración por defecto no se intenta salir a internet.
+Esto evita que la demo se rompa por falta de conectividad, caida del modelo o respuesta invalida. En la configuracion por defecto se prioriza Gemini si `GEMINI_API_KEY` existe; si no existe, salta automaticamente a Qwen/Ollama y luego a la plantilla local.
 
 ### Restricciones eticas del prompt
 
@@ -186,20 +189,27 @@ La recomendacion esta gobernada por reglas explicitas:
 
 ### Seguridad implementada en la demo
 
-- Configuracion por variables de entorno: `AI_MODE`, `DATABASE_URL`, `NEXT_PUBLIC_API_URL` y opcionalmente `GEMINI_API_KEY`.
+- Configuracion por variables de entorno: `AI_MODE`, `AI_PROVIDER_ORDER`, `GEMINI_API_KEY`, `DATABASE_URL`, `CORS_ORIGINS`, `RECOMMENDATION_RATE_LIMIT_MAX` y `NEXT_PUBLIC_API_URL`.
 - Consultas parametrizadas en PostgreSQL en los endpoints que reciben `id`.
+- Validacion de `id` entero positivo en endpoints de detalle y recomendacion.
+- CORS restringido por `CORS_ORIGINS`.
+- Limite de cuerpo JSON de `100kb`.
+- Headers basicos de seguridad: `X-Content-Type-Options`, `Referrer-Policy` y `Permissions-Policy`.
+- Rate limiting simple para la ruta de recomendacion.
+- DTO de salida para evitar devolver filas crudas completas.
+- Minimizacion de salud hacia IA: no se manda el antecedente textual completo, solo si existe antecedente registrado.
 - Separacion entre frontend y backend: la API key de Gemini no vive en el cliente.
 - Nombres ficticios y dataset simulado para evitar exposicion de datos reales.
 - Guardrails en el prompt para impedir uso discriminatorio de variables sensibles.
-- Camino principal local para no depender de servicios externos durante la evaluacion.
+- Respaldo local con Ollama para seguir operando si Gemini no está disponible.
 
 ### Brechas conocidas de esta version
 
 - No hay autenticacion ni autorizacion; se asume un unico docente en contexto demo.
-- `cors()` esta abierto y deberia restringirse por origen en produccion.
-- No hay rate limiting ni proteccion anti abuso sobre la ruta de recomendacion.
 - No hay auditoria de accesos ni trazabilidad de acciones por usuario.
 - La cache de recomendaciones esta en memoria y se pierde al reiniciar el servidor.
+- No hay HTTPS/TLS configurado desde la app; en produccion debe resolverse en proxy/plataforma.
+- `npm audit` del frontend puede reportar vulnerabilidad moderada transitiva de `postcss` dentro de Next.js; no queda vulnerabilidad alta tras actualizar a Next 15.5.18.
 
 ### Endurecimiento recomendado para produccion
 
@@ -214,7 +224,8 @@ La recomendacion esta gobernada por reglas explicitas:
 
 - Node.js 18+
 - Docker
-- Ollama local con `qwen2.5:7b` para el modo offline
+- Ollama local con `qwen2.5:7b` si quieres respaldo offline
+- Opcional: `GEMINI_API_KEY` para usar Gemini en `cloud-first` o `hybrid`
 
 ## Arranque
 
@@ -243,14 +254,14 @@ npm run dev
 
 Backend disponible en `http://localhost:3001`.
 
-Para uso sin internet, inicia Ollama en tu máquina y descarga el modelo una vez:
+Si quieres que el respaldo local funcione cuando no haya internet o Gemini falle, inicia Ollama en tu máquina y descarga el modelo una vez:
 
 ```bash
 ollama serve
 ollama pull qwen2.5:7b
 ```
 
-La configuración por defecto del backend ya prioriza este flujo con `AI_MODE=offline`.
+La configuracion por defecto del backend prioriza `Gemini` con `AI_MODE=cloud-first` si `GEMINI_API_KEY` esta configurada; si no, usa `Ollama` como respaldo y finalmente la plantilla local.
 
 Si quieres actualizar solo el contexto extendido:
 
@@ -272,12 +283,12 @@ Frontend disponible en `http://localhost:3000`.
 
 ## Archivos utiles para evaluacion
 
-- [`README.md`](/Users/macbook/Documents/Personal/hackaton2026/README.md): resumen tecnico y funcional.
-- [`PLAN.md`](/Users/macbook/Documents/Personal/hackaton2026/PLAN.md): decisiones de producto y construccion.
-- [`db/schema.sql`](/Users/macbook/Documents/Personal/hackaton2026/db/schema.sql): espejo del esquema SQL para lectura rapida.
-- [`db/evaluacion.sql`](/Users/macbook/Documents/Personal/hackaton2026/db/evaluacion.sql): consulta resumen por estudiante.
-- [`backend/lib/riskEngine.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/lib/riskEngine.js): regla explicable de riesgo.
-- [`backend/prompts/radarSystemPrompt.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/prompts/radarSystemPrompt.js): restricciones eticas de IA.
+- [`README.md`](README.md): resumen tecnico y funcional.
+- [`PLAN.md`](PLAN.md): decisiones de producto y construccion.
+- [`db/schema.sql`](db/schema.sql): espejo del esquema SQL para lectura rapida.
+- [`db/evaluacion.sql`](db/evaluacion.sql): consulta resumen por estudiante.
+- [`backend/lib/riskEngine.js`](backend/lib/riskEngine.js): regla explicable de riesgo.
+- [`backend/prompts/radarSystemPrompt.js`](backend/prompts/radarSystemPrompt.js): restricciones eticas de IA.
 
 ## Alcance no incluido en esta demo
 

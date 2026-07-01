@@ -93,6 +93,30 @@ export type Recomendacion = {
   fuente: "gemini" | "ollama" | "plantilla-local";
 };
 
+export type ConfigSistema = {
+  ia: {
+    modo: string;
+    ordenProveedores: string[];
+    personalizado: boolean;
+    geminiConfigurado: boolean;
+  };
+  riesgo: {
+    umbrales: {
+      asistencia: number;
+      notas: number;
+      comprension: number;
+      participacion: number;
+      tareas: number;
+    };
+    regla: string;
+    ventana: string;
+  };
+  limites: {
+    recomendacionesPorVentana: number;
+    ventanaMinutos: number;
+  };
+};
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, { ...init, cache: "no-store" });
   if (!res.ok) {
@@ -112,4 +136,8 @@ export function obtenerEstudiante(id: string | number) {
 
 export function generarRecomendacion(id: string | number) {
   return apiFetch<Recomendacion>(`/api/estudiantes/${id}/recomendacion`, { method: "POST" });
+}
+
+export function obtenerConfig() {
+  return apiFetch<ConfigSistema>("/api/config");
 }

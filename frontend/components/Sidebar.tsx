@@ -4,17 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutGrid, Users, TriangleAlert, Settings } from "lucide-react";
 
-// Alertas y Configuración quedan fuera del alcance de esta demo (no tienen
-// página propia): se muestran atenuadas y no navegables en vez de apuntar a
-// una ruta que no existe.
-const ITEMS_ACTIVOS = [
+const ITEMS = [
   { href: "/", label: "Resumen", icon: LayoutGrid, activo: (p: string) => p === "/" },
   { href: "/", label: "Estudiantes", icon: Users, activo: (p: string) => p.startsWith("/estudiantes") },
-];
-
-const ITEMS_DESHABILITADOS = [
-  { label: "Alertas", icon: TriangleAlert },
-  { label: "Configuración", icon: Settings },
+  { href: "/alertas", label: "Alertas", icon: TriangleAlert, activo: (p: string) => p.startsWith("/alertas") },
+  {
+    href: "/configuracion",
+    label: "Configuración",
+    icon: Settings,
+    activo: (p: string) => p.startsWith("/configuracion"),
+  },
 ];
 
 export default function Sidebar() {
@@ -29,7 +28,7 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex flex-col gap-1">
-          {ITEMS_ACTIVOS.map(({ href, label, icon: Icon, activo }) => (
+          {ITEMS.map(({ href, label, icon: Icon, activo }) => (
             <Link
               key={label}
               href={href}
@@ -40,15 +39,6 @@ export default function Sidebar() {
               <Icon size={18} />
               {label}
             </Link>
-          ))}
-          {ITEMS_DESHABILITADOS.map(({ label, icon: Icon }) => (
-            <span
-              key={label}
-              className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-light/40"
-            >
-              <Icon size={18} />
-              {label}
-            </span>
           ))}
         </nav>
       </div>
