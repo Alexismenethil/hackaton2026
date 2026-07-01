@@ -6,7 +6,7 @@ import { generarRecomendacion, type Recomendacion } from "@/lib/api";
 
 const ETIQUETA_FUENTE: Record<Recomendacion["fuente"], string> = {
   gemini: "Generado con Gemini",
-  ollama: "Generado con Ollama (respaldo local)",
+  ollama: "Generado con Ollama local (qwen2.5:7b)",
   "plantilla-local": "Generado con plantilla local (sin conexión a un modelo de IA)",
 };
 

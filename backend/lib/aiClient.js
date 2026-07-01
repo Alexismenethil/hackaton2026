@@ -13,6 +13,8 @@ try {
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 const OLLAMA_MODEL = "qwen2.5:7b";
+const AI_MODE = (process.env.AI_MODE || "offline").toLowerCase();
+const VALID_PROVIDERS = new Set(["ollama", "gemini", "plantilla-local"]);
 
 const ai = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
 
@@ -25,7 +27,8 @@ const RESPONSE_SCHEMA = {
   required: ["explicacion", "recomendacion"],
 };
 
-function buildUserPrompt({ estudiante, riesgo }) {
+function buildUserPrompt({ estudiante, riesgo, contextoIA }) {
+  const contexto = contextoIA || estudiante;
   const senalesTexto =
     riesgo.senales.map((s) => `- ${s.tipo}: ${s.resumen} (dato clave en la Semana ${s.semana})`).join("\n") ||
     "- Ninguna señal activa (tendencia estable).";
@@ -44,16 +47,16 @@ Métricas completas (inicio = promedio semanas 1-2, fin = promedio últimas 2 se
 - Tareas entregadas: ${riesgo.metricas.tareasInicio}% -> ${riesgo.metricas.tareasFin}% (delta ${riesgo.metricas.deltaTareas})
 
 Contexto de apoyo (no usar para calcular ni justificar el riesgo; solo adaptar la intervención):
-- Clasificación socioeconómica simulada: ${estudiante.clasificacion_socioeconomica || "no registrada"}
-- Internet en casa: ${estudiante.internet_en_casa ? "sí" : "no"}
-- Lengua materna: ${estudiante.lengua_materna || "no registrada"}
-- Distancia a la escuela: ${estudiante.distancia_a_escuela_km || "no registrada"} km
-- Situación laboral familiar: ${estudiante.situacion_laboral_familiar || "no registrada"}
-- Costo mensual estimado de estudio: S/ ${estudiante.costo_estudio_mensual || "no registrado"}
-- Estudiante trabaja: ${estudiante.estudiante_trabaja ? "sí" : "no"}
-- Antecedentes de salud: ${estudiante.problemas_salud_antecedentes || "no registrados"}
-- Es foráneo: ${estudiante.es_foraneo ? "sí" : "no"}
-- Observación docente: ${estudiante.observacion_docente || "sin observación"}
+- Clasificación socioeconómica simulada: ${contexto.clasificacion_socioeconomica || "no registrada"}
+- Internet en casa: ${contexto.internet_en_casa ? "sí" : "no"}
+- Lengua materna: ${contexto.lengua_materna || "no registrada"}
+- Distancia a la escuela: ${contexto.distancia_a_escuela_km || "no registrada"} km
+- Situación laboral familiar: ${contexto.situacion_laboral_familiar || "no registrada"}
+- Costo mensual estimado de estudio: S/ ${contexto.costo_estudio_mensual || "no registrado"}
+- Estudiante trabaja: ${contexto.estudiante_trabaja ? "sí" : "no"}
+- Antecedente de salud registrado: ${contexto.tiene_antecedente_salud ? "sí" : "no"}
+- Es foráneo: ${contexto.es_foraneo ? "sí" : "no"}
+- Observación docente: ${contexto.observacion_docente || "sin observación"}
 
 Genera la explicación y recomendación siguiendo las reglas del sistema.`;
 }
@@ -68,6 +71,27 @@ function parseJsonRespuesta(texto) {
   const data = JSON.parse(limpio);
   if (!data.explicacion || !data.recomendacion) throw new Error("Respuesta incompleta");
   return { explicacion: data.explicacion, recomendacion: data.recomendacion };
+}
+
+function getProviderOrder() {
+  const customOrder = (process.env.AI_PROVIDER_ORDER || "")
+    .split(",")
+    .map((provider) => provider.trim().toLowerCase())
+    .filter((provider) => VALID_PROVIDERS.has(provider));
+
+  if (customOrder.length) {
+    return [...new Set(customOrder)];
+  }
+
+  if (AI_MODE === "cloud-first") {
+    return ["gemini", "ollama", "plantilla-local"];
+  }
+
+  if (AI_MODE === "hybrid") {
+    return ["ollama", "gemini", "plantilla-local"];
+  }
+
+  return ["ollama", "plantilla-local"];
 }
 
 async function callGemini(payload) {
@@ -109,22 +133,39 @@ async function callOllama(payload) {
   return parseJsonRespuesta(response.message.content);
 }
 
-// Fallback en 3 niveles: Gemini -> Ollama (local) -> plantilla local sin IA.
-// Cualquier error en un nivel (falta de API key, sin internet, servidor de
-// Ollama apagado, JSON mal formado, etc.) cae al siguiente sin romper la demo.
+// Estrategia configurable con sesgo offline:
+// - offline (por defecto): Ollama -> plantilla local
+// - hybrid: Ollama -> Gemini -> plantilla local
+// - cloud-first: Gemini -> Ollama -> plantilla local
+// También se puede personalizar con AI_PROVIDER_ORDER=ollama,gemini,plantilla-local
+// para definir el orden exacto.
 async function generarRecomendacion(payload) {
-  try {
-    const resultado = await callGemini(payload);
-    return { ...resultado, fuente: "gemini" };
-  } catch (err) {
-    console.warn(`[IA] Gemini no disponible (${err.message}). Probando Ollama...`);
-  }
+  const providerOrder = getProviderOrder();
 
-  try {
-    const resultado = await callOllama(payload);
-    return { ...resultado, fuente: "ollama" };
-  } catch (err) {
-    console.warn(`[IA] Ollama no disponible (${err.message}). Usando plantilla local.`);
+  for (const provider of providerOrder) {
+    if (provider === "ollama") {
+      try {
+        const resultado = await callOllama(payload);
+        return { ...resultado, fuente: "ollama" };
+      } catch (err) {
+        console.warn(`[IA] Ollama no disponible (${err.message}).`);
+      }
+      continue;
+    }
+
+    if (provider === "gemini") {
+      try {
+        const resultado = await callGemini(payload);
+        return { ...resultado, fuente: "gemini" };
+      } catch (err) {
+        console.warn(`[IA] Gemini no disponible (${err.message}).`);
+      }
+      continue;
+    }
+
+    if (provider === "plantilla-local") {
+      return { ...generarRecomendacionTemplate(payload), fuente: "plantilla-local" };
+    }
   }
 
   return { ...generarRecomendacionTemplate(payload), fuente: "plantilla-local" };

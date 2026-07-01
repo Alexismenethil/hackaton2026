@@ -19,7 +19,7 @@ Radar Escolar ayuda al docente a responder tres preguntas:
 - Frontend: Next.js 14 (App Router) + React 18 + Tailwind CSS, en `/Users/macbook/Documents/Personal/hackaton2026/frontend`.
 - Backend: Express + Node.js, en `/Users/macbook/Documents/Personal/hackaton2026/backend`.
 - Base de datos: PostgreSQL, con cliente `pg` directo.
-- IA: Gemini como primer nivel, Ollama local como segundo, y plantilla local como fallback final.
+- IA: `Ollama` local con `qwen2.5:7b` como camino principal offline, y plantilla local como fallback final. `Gemini` queda como opción secundaria solo si se habilita explícitamente.
 
 ## Arquitectura
 
@@ -32,9 +32,9 @@ flowchart LR
     C --> D["Motor de riesgo deterministico"]
     C --> E["Cliente IA con fallback"]
     C --> F["PostgreSQL"]
-    E --> G["Gemini"]
-    E --> H["Ollama local"]
+    E --> H["Ollama local (qwen2.5:7b)"]
     E --> I["Plantilla local"]
+    E --> G["Gemini (opcional)"]
 ```
 
 ### Arquitectura frontend
@@ -50,7 +50,7 @@ flowchart LR
 - [`backend/server.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/server.js) expone la API REST y el `healthcheck`.
 - [`backend/routes/estudiantes.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/routes/estudiantes.js) concentra los endpoints de consulta y recomendacion.
 - [`backend/lib/riskEngine.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/lib/riskEngine.js) implementa la regla de riesgo deterministica.
-- [`backend/lib/aiClient.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/lib/aiClient.js) encapsula la generacion de recomendaciones con fallback en 3 niveles.
+- [`backend/lib/aiClient.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/lib/aiClient.js) encapsula la generacion de recomendaciones con estrategia offline-first configurable.
 - [`backend/prompts/radarSystemPrompt.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/prompts/radarSystemPrompt.js) define las restricciones eticas y de seguridad de uso para la IA.
 - [`backend/db/seed.js`](/Users/macbook/Documents/Personal/hackaton2026/backend/db/seed.js) genera un dataset reproducible para la demo.
 
@@ -60,7 +60,7 @@ flowchart LR
 2. El backend consulta PostgreSQL y agrupa historial por estudiante.
 3. El motor de riesgo compara primeras 2 semanas vs ultimas 2 semanas.
 4. Si el usuario solicita recomendacion, el backend arma un prompt estructurado.
-5. La recomendacion se intenta con Gemini, luego Ollama, y finalmente con una plantilla local si lo anterior falla.
+5. La recomendacion se intenta primero con `Ollama qwen2.5:7b`, y si no está disponible cae a una plantilla local sin depender de internet.
 6. La UI muestra la recomendacion junto con la fuente que respondio: `gemini`, `ollama` o `plantilla-local`.
 
 ## Base de datos
@@ -151,13 +151,26 @@ El backend tambien identifica la semana de mayor caida para citar el dato que ju
 
 ## IA y explicabilidad
 
-### Fallback en 3 niveles
+### Estrategia recomendada para la demo
+
+Modo por defecto: `offline`
+
+1. Ollama local (`qwen2.5:7b`)
+2. Plantilla local deterministica
+
+Modo opcional: `hybrid`
+
+1. Ollama local (`qwen2.5:7b`)
+2. Gemini (`gemini-2.5-flash`)
+3. Plantilla local deterministica
+
+Modo opcional: `cloud-first`
 
 1. Gemini (`gemini-2.5-flash`)
 2. Ollama local (`qwen2.5:7b`)
 3. Plantilla local deterministica
 
-Esto evita que la demo se rompa por falta de API key, conectividad, caida del modelo o respuesta invalida.
+Esto evita que la demo se rompa por falta de conectividad, caida del modelo o respuesta invalida. En la configuración por defecto no se intenta salir a internet.
 
 ### Restricciones eticas del prompt
 
@@ -173,12 +186,12 @@ La recomendacion esta gobernada por reglas explicitas:
 
 ### Seguridad implementada en la demo
 
-- Configuracion por variables de entorno: `GEMINI_API_KEY`, `DATABASE_URL`, `NEXT_PUBLIC_API_URL`.
+- Configuracion por variables de entorno: `AI_MODE`, `DATABASE_URL`, `NEXT_PUBLIC_API_URL` y opcionalmente `GEMINI_API_KEY`.
 - Consultas parametrizadas en PostgreSQL en los endpoints que reciben `id`.
 - Separacion entre frontend y backend: la API key de Gemini no vive en el cliente.
 - Nombres ficticios y dataset simulado para evitar exposicion de datos reales.
 - Guardrails en el prompt para impedir uso discriminatorio de variables sensibles.
-- Fallback local para no depender de servicios externos durante la evaluacion.
+- Camino principal local para no depender de servicios externos durante la evaluacion.
 
 ### Brechas conocidas de esta version
 
@@ -201,7 +214,7 @@ La recomendacion esta gobernada por reglas explicitas:
 
 - Node.js 18+
 - Docker
-- Opcional: Ollama local con `qwen2.5:7b`
+- Ollama local con `qwen2.5:7b` para el modo offline
 
 ## Arranque
 
@@ -229,6 +242,15 @@ npm run dev
 ```
 
 Backend disponible en `http://localhost:3001`.
+
+Para uso sin internet, inicia Ollama en tu máquina y descarga el modelo una vez:
+
+```bash
+ollama serve
+ollama pull qwen2.5:7b
+```
+
+La configuración por defecto del backend ya prioriza este flujo con `AI_MODE=offline`.
 
 Si quieres actualizar solo el contexto extendido:
 

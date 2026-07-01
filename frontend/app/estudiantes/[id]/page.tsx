@@ -24,10 +24,11 @@ function calcularMetricasRecientes(historial: SemanaSeguimiento[]) {
   };
 }
 
-export default async function EstudianteDetallePage({ params }: { params: { id: string } }) {
+export default async function EstudianteDetallePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   let detalle;
   try {
-    detalle = await obtenerEstudiante(params.id);
+    detalle = await obtenerEstudiante(id);
   } catch {
     return (
       <div className="px-10 py-8">
