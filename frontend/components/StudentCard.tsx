@@ -11,7 +11,7 @@ export default function StudentCard({ estudiante }: { estudiante: EstudianteResu
   const metricasRecientes = estudiante.metricasRecientes ?? {};
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl bg-paper p-5 shadow-sm">
+    <div className="flex flex-col gap-4 rounded-2xl bg-paper p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-center justify-between gap-3">
         <Avatar nombre={estudiante.nombre_ficticio} />
         <RiskBadge nivel={estudiante.nivelRiesgo} />
@@ -48,7 +48,7 @@ export default function StudentCard({ estudiante }: { estudiante: EstudianteResu
 
       <Link
         href={`/estudiantes/${estudiante.id}`}
-        className="rounded-xl bg-ink py-2.5 text-center text-sm font-semibold text-white transition-opacity hover:opacity-90"
+        className="rounded-xl bg-ink py-2.5 text-center text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
       >
         Ver detalle
       </Link>

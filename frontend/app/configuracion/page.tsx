@@ -28,17 +28,17 @@ export default async function ConfiguracionPage() {
     config = await obtenerConfig();
   } catch {
     return (
-      <div className="px-10 py-8">
+      <div className="px-4 py-8 sm:px-6 md:px-10">
         <p className="text-danger">No se pudo conectar con el backend para leer la configuración.</p>
       </div>
     );
   }
 
   return (
-    <div className="pb-10">
+    <div className="animate-fade-in-up pb-10">
       <TopBar title="Configuración" />
 
-      <div className="flex flex-col gap-5 px-10">
+      <div className="flex flex-col gap-5 px-4 sm:px-6 md:px-10">
         <div className="rounded-2xl bg-paper p-6 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
             <Sparkles size={18} className="text-ink-light" />

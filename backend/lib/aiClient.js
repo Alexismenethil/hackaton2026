@@ -73,25 +73,27 @@ function parseJsonRespuesta(texto) {
   return { explicacion: data.explicacion, recomendacion: data.recomendacion };
 }
 
-function getProviderOrder() {
+// Se exporta también para /api/config (routes/config.js), así la pantalla de
+// Configuración muestra el orden real sin reimplementar esta lógica.
+function getProviderOrderInfo() {
   const customOrder = (process.env.AI_PROVIDER_ORDER || "")
     .split(",")
     .map((provider) => provider.trim().toLowerCase())
     .filter((provider) => VALID_PROVIDERS.has(provider));
 
   if (customOrder.length) {
-    return [...new Set(customOrder)];
+    return { aiMode: AI_MODE, providerOrder: [...new Set(customOrder)], personalizado: true };
   }
 
   if (AI_MODE === "cloud-first") {
-    return ["gemini", "ollama", "plantilla-local"];
+    return { aiMode: AI_MODE, providerOrder: ["gemini", "ollama", "plantilla-local"], personalizado: false };
   }
 
   if (AI_MODE === "hybrid") {
-    return ["ollama", "gemini", "plantilla-local"];
+    return { aiMode: AI_MODE, providerOrder: ["ollama", "gemini", "plantilla-local"], personalizado: false };
   }
 
-  return ["ollama", "plantilla-local"];
+  return { aiMode: AI_MODE, providerOrder: ["ollama", "plantilla-local"], personalizado: false };
 }
 
 async function callGemini(payload) {
@@ -140,7 +142,7 @@ async function callOllama(payload) {
 // También se puede personalizar con AI_PROVIDER_ORDER=gemini,ollama,plantilla-local
 // para definir el orden exacto.
 async function generarRecomendacion(payload) {
-  const providerOrder = getProviderOrder();
+  const { providerOrder } = getProviderOrderInfo();
 
   for (const provider of providerOrder) {
     if (provider === "ollama") {
@@ -171,4 +173,4 @@ async function generarRecomendacion(payload) {
   return { ...generarRecomendacionTemplate(payload), fuente: "plantilla-local" };
 }
 
-module.exports = { generarRecomendacion };
+module.exports = { generarRecomendacion, getProviderOrderInfo };

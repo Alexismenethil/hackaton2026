@@ -6,23 +6,7 @@ import SignalsList from "@/components/detail/SignalsList";
 import AIRecommendationCard from "@/components/detail/AIRecommendationCard";
 import ObservationLog from "@/components/detail/ObservationLog";
 import ContextSupportCard from "@/components/detail/ContextSupportCard";
-import { obtenerEstudiante, type SemanaSeguimiento } from "@/lib/api";
-
-function promedio(valores: number[]) {
-  if (valores.length === 0) return null;
-  return Math.round((valores.reduce((total, valor) => total + valor, 0) / valores.length) * 10) / 10;
-}
-
-function calcularMetricasRecientes(historial: SemanaSeguimiento[]) {
-  const ultimas4 = historial.slice(-4);
-  return {
-    asistencia_ultimas_4_semanas: promedio(ultimas4.map((h) => Number(h.asistencia_pct))),
-    promedio_notas: promedio(ultimas4.map((h) => Number(h.promedio_notas))),
-    comprension_lectora: promedio(ultimas4.map((h) => Number(h.comprension_lectora)).filter(Number.isFinite)),
-    participacion: promedio(ultimas4.map((h) => Number(h.participacion_score))),
-    tareas_entregadas: promedio(ultimas4.map((h) => Number(h.tareas_entregadas_pct)).filter(Number.isFinite)),
-  };
-}
+import { obtenerEstudiante } from "@/lib/api";
 
 export default async function EstudianteDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -31,35 +15,39 @@ export default async function EstudianteDetallePage({ params }: { params: Promis
     detalle = await obtenerEstudiante(id);
   } catch {
     return (
-      <div className="px-10 py-8">
+      <div className="px-4 py-8 sm:px-6 md:px-10">
         <p className="text-danger">No se pudo cargar la información del estudiante.</p>
       </div>
     );
   }
 
-  const { estudiante, historial, riesgo } = detalle;
-  const metricasRecientes = detalle.metricasRecientes ?? calcularMetricasRecientes(historial);
+  const { estudiante, historial, riesgo, metricasRecientes } = detalle;
 
   return (
-    <div className="pb-10">
-      <div className="flex items-center gap-4 px-10 py-8">
-        <Link href="/" className="text-ink-light hover:text-ink">
+    <div className="animate-fade-in-up pb-10">
+      <div className="flex items-center gap-3 px-4 py-6 sm:px-6 md:px-10 md:py-8">
+        <Link
+          href="/"
+          aria-label="Volver"
+          className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full text-ink-light transition-colors duration-150 hover:bg-black/5 hover:text-ink active:scale-95"
+        >
           <ArrowLeft size={22} />
         </Link>
-        <h2 className="text-2xl font-bold text-ink">Radar Escolar</h2>
+        <h2 className="hidden text-2xl font-bold text-ink md:block">Radar Escolar</h2>
+        <h2 className="text-lg font-bold text-ink md:hidden">Detalle del estudiante</h2>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 px-10 lg:grid-cols-[320px_1fr]">
+      <div className="grid grid-cols-1 gap-5 px-4 sm:px-6 md:px-10 lg:grid-cols-[320px_1fr]">
         <ProfileCard estudiante={estudiante} riesgo={riesgo} />
         <EvolutionChart historial={historial} />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 px-10 pt-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 px-4 pt-5 sm:px-6 md:px-10 lg:grid-cols-2">
         <SignalsList senales={riesgo.senales} />
         <AIRecommendationCard estudianteId={estudiante.id} />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 px-10 pt-5 lg:grid-cols-[1fr_420px]">
+      <div className="grid grid-cols-1 gap-5 px-4 pt-5 sm:px-6 md:px-10 lg:grid-cols-[1fr_420px]">
         <ContextSupportCard estudiante={estudiante} metricas={metricasRecientes} />
         <ObservationLog estudianteId={estudiante.id} />
       </div>

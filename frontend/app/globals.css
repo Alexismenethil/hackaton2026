@@ -2,7 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   background-color: #f7f2e7;
   color: #2e4756;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  scrollbar-width: thin;
 }

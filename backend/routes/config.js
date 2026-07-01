@@ -1,27 +1,11 @@
 const express = require("express");
 const { THRESHOLDS } = require("../lib/riskEngine");
+const { getProviderOrderInfo } = require("../lib/aiClient");
 
 const router = express.Router();
 
-const VALID_PROVIDERS = new Set(["ollama", "gemini", "plantilla-local"]);
-
-// Espejo de lib/aiClient.js#getProviderOrder: solo lectura, para que la
-// pantalla de Configuración muestre el orden real sin duplicar la lógica.
-function getProviderOrder() {
-  const aiMode = (process.env.AI_MODE || "offline").toLowerCase();
-  const customOrder = (process.env.AI_PROVIDER_ORDER || "")
-    .split(",")
-    .map((provider) => provider.trim().toLowerCase())
-    .filter((provider) => VALID_PROVIDERS.has(provider));
-
-  if (customOrder.length) return { aiMode, providerOrder: [...new Set(customOrder)], personalizado: true };
-  if (aiMode === "cloud-first") return { aiMode, providerOrder: ["gemini", "ollama", "plantilla-local"], personalizado: false };
-  if (aiMode === "hybrid") return { aiMode, providerOrder: ["ollama", "gemini", "plantilla-local"], personalizado: false };
-  return { aiMode, providerOrder: ["ollama", "plantilla-local"], personalizado: false };
-}
-
 router.get("/", (req, res) => {
-  const { aiMode, providerOrder, personalizado } = getProviderOrder();
+  const { aiMode, providerOrder, personalizado } = getProviderOrderInfo();
 
   res.json({
     ia: {

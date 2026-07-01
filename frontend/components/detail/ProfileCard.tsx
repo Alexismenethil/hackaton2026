@@ -1,5 +1,6 @@
 import Avatar from "@/components/Avatar";
 import type { Estudiante, Riesgo } from "@/lib/api";
+import { CLASIFICACION_SOCIOECONOMICA } from "@/lib/contextLabels";
 
 const ETIQUETA_POR_TIPO: Record<string, string> = {
   asistencia: "Alerta de Asistencia",
@@ -7,12 +8,6 @@ const ETIQUETA_POR_TIPO: Record<string, string> = {
   comprension: "Alerta de Comprensión",
   participacion: "Alerta de Participación",
   tareas: "Alerta de Tareas",
-};
-
-const CLASIFICACION: Record<string, string> = {
-  no_pobre: "No pobre",
-  pobre: "Pobre",
-  pobre_extremo: "Pobre extremo",
 };
 
 export default function ProfileCard({ estudiante, riesgo }: { estudiante: Estudiante; riesgo: Riesgo }) {
@@ -45,7 +40,7 @@ export default function ProfileCard({ estudiante, riesgo }: { estudiante: Estudi
 
       <div className="flex flex-wrap justify-center gap-2 border-t border-black/5 pt-4">
         <span className="rounded-full bg-cream px-3 py-1 text-xs font-semibold text-ink-light">
-          {CLASIFICACION[estudiante.clasificacion_socioeconomica] || "Sin CSE"}
+          {CLASIFICACION_SOCIOECONOMICA[estudiante.clasificacion_socioeconomica] || "Sin CSE"}
         </span>
         {!estudiante.internet_en_casa && (
           <span className="rounded-full bg-cream px-3 py-1 text-xs font-semibold text-ink-light">Sin internet</span>

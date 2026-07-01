@@ -6,6 +6,14 @@ La demo usa nombres ficticios y contexto socioeducativo simulado. El riesgo se c
 
 Ver tambien [PLAN.md](PLAN.md).
 
+## Ficha tecnica
+
+- Proyecto: Radar Escolar
+- Evento: Hackathon EPIS XXI
+- Documento: README de sustentacion tecnica
+- Jurado de referencia: Pelayo Quispe Bautista
+- Jurado de referencia: Stivens Rayli Espinoza Reina
+
 ## Propuesta
 
 Radar Escolar ayuda al docente a responder tres preguntas:

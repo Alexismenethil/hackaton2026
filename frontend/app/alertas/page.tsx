@@ -9,7 +9,7 @@ export default async function AlertasPage() {
     estudiantes = await listarEstudiantes();
   } catch {
     return (
-      <div className="px-10 py-8">
+      <div className="px-4 py-8 sm:px-6 md:px-10">
         <p className="text-danger">
           No se pudo conectar con el backend. Verifica que el servidor Express y el contenedor de Postgres estén
           corriendo.
@@ -22,10 +22,10 @@ export default async function AlertasPage() {
   const medio = estudiantes.filter((e) => e.nivelRiesgo === "Medio");
 
   return (
-    <div className="pb-10">
+    <div className="animate-fade-in-up pb-10">
       <TopBar title="Alertas" />
 
-      <div className="flex flex-col gap-8 px-10">
+      <div className="flex flex-col gap-8 px-4 sm:px-6 md:px-10">
         {alto.length === 0 && medio.length === 0 ? (
           <div className="flex items-center gap-3 rounded-2xl bg-paper p-6 shadow-sm">
             <CheckCircle2 className="text-success" size={22} />

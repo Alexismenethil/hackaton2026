@@ -1,11 +1,6 @@
 import { Briefcase, HeartPulse, Languages, MapPin, Wifi, WifiOff, WalletCards } from "lucide-react";
 import type { Estudiante, MetricasRecientes } from "@/lib/api";
-
-const CLASIFICACION: Record<string, string> = {
-  no_pobre: "No pobre",
-  pobre: "Pobre",
-  pobre_extremo: "Pobre extremo",
-};
+import { CLASIFICACION_SOCIOECONOMICA } from "@/lib/contextLabels";
 
 function valorTexto(valor: number | null | undefined, sufijo = "") {
   return valor === null || valor === undefined || Number.isNaN(valor) ? "Sin dato" : `${valor}${sufijo}`;
@@ -45,7 +40,7 @@ export default function ContextSupportCard({
     {
       icono: WalletCards,
       etiqueta: "CSE y costo",
-      valor: `${CLASIFICACION[estudiante.clasificacion_socioeconomica] || "Sin CSE"} · ${costo}`,
+      valor: `${CLASIFICACION_SOCIOECONOMICA[estudiante.clasificacion_socioeconomica] || "Sin CSE"} · ${costo}`,
     },
     {
       icono: Briefcase,

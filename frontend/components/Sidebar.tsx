@@ -2,25 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Users, TriangleAlert, Settings } from "lucide-react";
-
-const ITEMS = [
-  { href: "/", label: "Resumen", icon: LayoutGrid, activo: (p: string) => p === "/" },
-  { href: "/", label: "Estudiantes", icon: Users, activo: (p: string) => p.startsWith("/estudiantes") },
-  { href: "/alertas", label: "Alertas", icon: TriangleAlert, activo: (p: string) => p.startsWith("/alertas") },
-  {
-    href: "/configuracion",
-    label: "Configuración",
-    icon: Settings,
-    activo: (p: string) => p.startsWith("/configuracion"),
-  },
-];
+import { NAV_ITEMS } from "@/lib/navItems";
 
 export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col justify-between border-r border-black/5 bg-cream px-4 py-6">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col justify-between border-r border-black/5 bg-cream px-4 py-6 md:flex">
       <div>
         <div className="px-2 pb-8">
           <h1 className="text-lg font-bold text-ink">Radar Escolar</h1>
@@ -28,12 +16,14 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex flex-col gap-1">
-          {ITEMS.map(({ href, label, icon: Icon, activo }) => (
+          {NAV_ITEMS.map(({ href, label, icon: Icon, activo }) => (
             <Link
               key={label}
               href={href}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                activo(pathname) ? "bg-accent-light text-ink" : "text-ink-light hover:bg-black/5"
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                activo(pathname)
+                  ? "bg-accent-light text-ink shadow-sm"
+                  : "text-ink-light hover:translate-x-0.5 hover:bg-black/5"
               }`}
             >
               <Icon size={18} />
